@@ -10,6 +10,8 @@
 import os
 import subprocess
 
+log_file = open('log','w+')
+
 def file_name(file_dir,suffix_name):
     L=[]
     for root, dirs, files in os.walk(file_dir):
@@ -30,10 +32,10 @@ def pcl_outlier_removal(filename,count):
     dest_name = real_filename+'_outlier'+suffix_filename
     command = \
         'pcl_outlier_removal_release\
-        -method statistical -mean_k 30 -std_dev_mul 1.0\
+        -method statistical -mean_k 50 -std_dev_mul 0.5\
         %s %s' % (filename,real_filename+'\\'+dest_name)
     print(command)
-    subprocess.call(command)
+    subprocess.call(command,stderr=log_file,stdout=log_file)
     print('[%d]正在将点云(%s)转换为ply格式...' % (count,dest_name))
     pcl_pcd2ply(real_filename,real_filename,real_filename+'_outlier'+suffix_filename);
 
@@ -51,7 +53,7 @@ def pcl_voxel_grid(filename,count):
         -leaf 0.01f\
         %s %s' % (src_name, real_filename + '\\' + dest_name)
     print(command)
-    subprocess.call(command)
+    subprocess.call(command,stderr=log_file,stdout=log_file)
     print('[%d]正在将点云(%s)转换为ply格式...' % (count,dest_name))
     pcl_pcd2ply(real_filename,real_filename,real_filename+'_grid'+suffix_filename);
 
@@ -65,8 +67,7 @@ def pcl_pcd2ply(src_dirname,dst_dirname,filename):
         'pcl_pcd2ply_release\
         %s %s' % (src_name, dst_name)
     print(command)
-    subprocess.run(command)
-
+    subprocess.call(command,stderr=log_file,stdout=log_file)
 
 if __name__ == '__main__':
     # 查找当前目录下的pcd文件
@@ -94,3 +95,5 @@ if __name__ == '__main__':
         print('[%d]正在将原始点云(%s)进行下采样...' % (count,file))
         pcl_voxel_grid(file,count)
         count = count +1
+
+    log_file.close()
