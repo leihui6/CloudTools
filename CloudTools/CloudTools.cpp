@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "CloudTools.h"
 
 CloudTools::CloudTools() {
@@ -6,7 +6,7 @@ CloudTools::CloudTools() {
 	m_default_search_radius = 0.8;
 	m_border_search_radius = m_default_search_radius;
 	m_plane_segment_search_radius = m_default_search_radius;
-	// ±ß½ç¾ÛÀàµÄËÑË÷°ë¾¶
+	// è¾¹ç•Œèšç±»çš„æœç´¢åŠå¾„
 	m_cloud_cluster_search_radius = m_default_search_radius;
 	m_color_using_resolution_search_radius = m_default_search_radius;
 
@@ -23,7 +23,7 @@ double CloudTools::vector_angle_360(pcl::PointXYZ& p1, pcl::PointXYZ& p2) {
 }
 
 
-// ¼ÆËãÁ½¸öÏòÁ¿µÄ¼Ğ½Ç[0,180]
+// è®¡ç®—ä¸¤ä¸ªå‘é‡çš„å¤¹è§’[0,180]
 double CloudTools::vector_angle_180(pcl::PointXYZ& p1, pcl::PointXYZ& p2) {
 	double cos_angle_value = (p1.x * p2.x + p1.y * p2.y + p1.z * p2.z) /
 		(sqrt(p1.x * p1.x + p1.y * p1.y + p1.z * p1.z) * sqrt(p2.x * p2.x + p2.y * p2.y + p2.z * p2.z));
@@ -40,7 +40,7 @@ double CloudTools::angle2radian(double angle) {
 	return M_PI * angle / 180;
 }
 
-// Í³¼ÆÂË²¨
+// ç»Ÿè®¡æ»¤æ³¢
 void CloudTools::filter_statistical_outlier_removal(
 	pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
 	pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
@@ -63,7 +63,7 @@ void CloudTools::filter_voxel_grid_downsample(
 	sor.filter(*output_cloud);           
 }
 
-// ÅĞ¶ÏµãÔÆÊÇ·ñ°üº¬·¨ÏòÁ¿
+// åˆ¤æ–­ç‚¹äº‘æ˜¯å¦åŒ…å«æ³•å‘é‡
 bool CloudTools::is_contained_normal(pcl::PCLPointCloud2::Ptr cloud) {
 	int normal_count = 0;
 	for (int i = 0; i != cloud->fields.size(); i++) {
@@ -92,7 +92,7 @@ void CloudTools::create_cloud_with_normal(
 	pcl::concatenateFields(*cloud_xyz, *normal, *cloud_normal);
 }
 
-void CloudTools::plane_segment(
+void CloudTools::segment_plane(
 	pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normal,
 	vector<vector<int>> &total_plane_index,
 	float search_radius,
@@ -122,12 +122,16 @@ void CloudTools::plane_segment(
 	}
 }
 
-void CloudTools::color_using_normal(pcl::PCLPointCloud2::Ptr cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb)
+void CloudTools::color_using_normal(
+	pcl::PCLPointCloud2::Ptr cloud, 
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb, 
+	bool force_to_normal,
+	float radius)
 {
 	pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normal(new pcl::PointCloud<pcl::PointNormal>());
-	if (!is_contained_normal(cloud)) 
+	if (force_to_normal || !is_contained_normal(cloud))
 	{
-		create_cloud_with_normal(cloud, cloud_normal);
+		create_cloud_with_normal(cloud, cloud_normal, radius);
 	}
 	else 
 	{
@@ -191,6 +195,79 @@ void CloudTools::color_using_normal(pcl::PCLPointCloud2::Ptr cloud, pcl::PointCl
 	standardize_not_organized_cloud_header(*cloud_rgb);
 }
 
+void CloudTools::color_using_normal(
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb, 
+	float radius)
+{
+	pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normal(new pcl::PointCloud<pcl::PointNormal>());
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+	ne.setInputCloud(cloud);
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+	ne.setSearchMethod(tree);
+	pcl::PointCloud<pcl::Normal>::Ptr normal(new pcl::PointCloud<pcl::Normal>);
+	ne.setRadiusSearch(radius);
+	ne.compute(*normal);
+	pcl::concatenateFields(*cloud, *normal, *cloud_normal);
+
+	//vector<float>normal_x_vec, normal_y_vec, normal_z_vec;
+	float min_nx = 999, min_ny = 999, min_nz = 999;
+	float max_nx = -999, max_ny = -999, max_nz = -999;
+	float curr_nx = 0, curr_ny = 0, curr_nz = 0;
+
+	pcl::PointXYZRGB point;
+
+	for (int i = 0; i < cloud_normal->points.size(); i++)
+	{
+		curr_nx = cloud_normal->points[i].normal_x;
+		curr_ny = cloud_normal->points[i].normal_y;
+		curr_nz = cloud_normal->points[i].normal_z;
+
+		//normal_x_vec.push_back(curr_nx);
+		//normal_y_vec.push_back(curr_ny);
+		//normal_z_vec.push_back(curr_nz);
+
+		if (curr_nx > max_nx)
+			max_nx = curr_nx;
+		if (curr_ny > max_ny)
+			max_ny = curr_ny;
+		if (curr_nz > max_nz)
+			max_nz = curr_nz;
+
+		if (curr_nx < min_nx)
+			min_nx = curr_nx;
+		if (curr_ny < min_ny)
+			min_ny = curr_ny;
+		if (curr_nz < min_nz)
+			min_nz = curr_nz;
+
+		point.x = cloud_normal->points[i].x;
+		point.y = cloud_normal->points[i].y;
+		point.z = cloud_normal->points[i].z;
+		cloud_rgb->push_back(point);
+	}
+	//cout << "max_nx/ny/nz" << max_nx << " " << max_ny << " " << max_nz << endl;
+	//cout << "min_nx/ny/nz" << min_nx << " " << min_ny << " " << min_nz << endl;
+
+	float
+		total_nx = max_nx - min_nx,
+		total_ny = max_ny - min_ny,
+		total_nz = max_nz - min_nz;
+
+	uint8_t r, g, b;
+	uint32_t rgb;
+
+	for (int i = 0; i < cloud_rgb->points.size(); i++)
+	{
+		r = (cloud_normal->points[i].normal_x - min_nx) / total_nx * 255;
+		g = (cloud_normal->points[i].normal_y - min_ny) / total_ny * 255;
+		b = (cloud_normal->points[i].normal_z - min_nz) / total_nz * 255;
+		rgb = ((uint32_t)r << 16 | (uint32_t)g << 8 | (uint32_t)b);
+		cloud_rgb->points[i].rgb = *reinterpret_cast<float*>(&rgb);
+	}
+	standardize_not_organized_cloud_header(*cloud_rgb);
+}
+
 void CloudTools::color_using_resolution(
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
 	pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb,
@@ -240,73 +317,145 @@ void CloudTools::color_using_resolution(
 	standardize_not_organized_cloud_header(*cloud_rgb);
 }
 
-bool CloudTools::is_border_point_on_plane(int index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::KdTreeFLANN<pcl::PointXYZ>& kdtree)
+bool CloudTools::is_border_point_on_plane(
+	int index, 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+	pcl::KdTreeFLANN<pcl::PointXYZ>& kdtree)
 {
-	vector<bool> dimension(int(360 / m_border_min_angle), false);
+	vector<bool> dimension(ceil(360 / m_border_min_angle), false);
 	vector<int> pointIdxRadiusSearch;
 	vector<float> pointRadiusSquaredDistance;
 	vector<pcl::PointXYZ, Eigen::aligned_allocator<pcl::PointXYZ> > & data = cloud->points;
-
+	double max_angle = -999;
 	if (kdtree.radiusSearch(
 		data[index],
-		m_border_search_radius, 
-		pointIdxRadiusSearch, 
+		m_border_search_radius,
+		pointIdxRadiusSearch,
 		pointRadiusSquaredDistance) > 0)
 	{
 		pcl::PointXYZ init_vector, compared_vector;
+		
 
-		// Set init vector
-		if (pointIdxRadiusSearch.size() > 0) 
+		for (int k = 1; k < pointIdxRadiusSearch.size(); k++)
 		{
 			init_vector = pcl::PointXYZ(
-				data[pointIdxRadiusSearch[1]].x - data[index].x,
-				data[pointIdxRadiusSearch[1]].y - data[index].y,
-				data[pointIdxRadiusSearch[1]].z - data[index].z);
-		}
-		else
-		{
-			return true;
-		}
-		// Set compared vector
-		for (size_t i = 2; i < pointIdxRadiusSearch.size(); ++i) 
-		{
-			compared_vector = pcl::PointXYZ(
-				data[pointIdxRadiusSearch[i]].x - data[index].x,
-				data[pointIdxRadiusSearch[i]].y - data[index].y,
-				data[pointIdxRadiusSearch[i]].z - data[index].z);
+				data[pointIdxRadiusSearch[k]].x - data[index].x,
+				data[pointIdxRadiusSearch[k]].y - data[index].y,
+				data[pointIdxRadiusSearch[k]].z - data[index].z);
 
-			double angle = 
-				vector_angle_360(init_vector, compared_vector);
+			for (size_t i = 1; i < pointIdxRadiusSearch.size(); ++i)
+			{
+				if (i != k)
+				{
+					compared_vector = pcl::PointXYZ(
+						data[pointIdxRadiusSearch[i]].x - data[index].x,
+						data[pointIdxRadiusSearch[i]].y - data[index].y,
+						data[pointIdxRadiusSearch[i]].z - data[index].z);
+					double angle =
+						vector_angle_360(init_vector, compared_vector);
 
-			// cout << "now compared points:" << init_vector << " " << compared_vector << " angle:" << angle << endl;
-
-			dimension[angle / m_border_min_angle] = true;
+					if (angle > max_angle)
+					{
+						max_angle = angle;
+					}
+				}
+			}
 		}
 	}
-	for (int i = 0; i < dimension.size(); i++) 
+
+	if (360 - max_angle > m_border_min_angle)
 	{
-		if (dimension[i] == false) 
-		{
-			return true;
-		}
+		return true;
 	}
+
+
+		//	// Set init vector
+		//	if (pointIdxRadiusSearch.size() > 0) 
+		//	{
+		//		init_vector = pcl::PointXYZ(
+		//			data[pointIdxRadiusSearch[1]].x - data[index].x,
+		//			data[pointIdxRadiusSearch[1]].y - data[index].y,
+		//			data[pointIdxRadiusSearch[1]].z - data[index].z);
+		//	}
+		//	else
+		//	{
+		//		return true;
+		//	}
+		//	// Set compared vector
+		//	for (size_t i = 2; i < pointIdxRadiusSearch.size(); ++i) 
+		//	{
+		//		compared_vector = pcl::PointXYZ(
+		//			data[pointIdxRadiusSearch[i]].x - data[index].x,
+		//			data[pointIdxRadiusSearch[i]].y - data[index].y,
+		//			data[pointIdxRadiusSearch[i]].z - data[index].z);
+
+		//		double angle = 
+		//			vector_angle_360(init_vector, compared_vector);
+
+		//		// cout << "now compared points:" << init_vector << " " << compared_vector << " angle:" << angle << endl;
+
+		//		dimension[angle / m_border_min_angle] = true;
+		//	}
+		//}
+		//for (int i = 0; i < dimension.size(); i++) 
+		//{
+		//	if (dimension[i] == false) 
+		//	{
+		//		return true;
+		//	}
+		//}
+	
+
 	return false;
 }
 
-void CloudTools::border_segment(vector<int> &border_index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float min_angle) {
-	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
-	kdtree.setInputCloud(cloud);
-	m_border_min_angle = min_angle;
-	for (int i = 0; i < cloud->points.size(); ++i) 
+void CloudTools::segment_plane_border(
+	vector<int> &border_index, 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+	float radius, 
+	float min_angle) {
+	//pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
+	//kdtree.setInputCloud(cloud);
+	//m_border_min_angle = min_angle;
+	//m_border_search_radius = radius;
+	//for (int i = 0; i < cloud->points.size(); ++i) 
+	//{
+	//	if (is_border_point_on_plane(i, cloud, kdtree))
+	//	{
+	//		border_index.push_back(i);
+	//	}
+	//}
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	pcl::PointCloud<pcl::Boundary> boundaries;
+	pcl::BoundaryEstimation<pcl::PointXYZ, pcl::Normal, pcl::Boundary> est;
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>());
+
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> normEst;  
+	normEst.setInputCloud(cloud);
+	normEst.setSearchMethod(tree);
+	normEst.setRadiusSearch(2);
+	normEst.compute(*normals);
+
+	est.setInputCloud(cloud);
+	est.setInputNormals(normals);
+	est.setAngleThreshold(M_PI / (180 / min_angle));
+	est.setSearchMethod(tree);
+	est.setRadiusSearch(radius);
+	est.compute(boundaries);
+
+	for (int i = 0; i < cloud->size(); i++) 
 	{
-		if (is_border_point_on_plane(i, cloud, kdtree))
+		uint8_t x = (boundaries.points[i].boundary_point);
+		int a = static_cast<int>(x); //è¯¥å‡½æ•°çš„åŠŸèƒ½æ˜¯å¼ºåˆ¶ç±»å‹è½¬æ¢
+		if (a == 1)
 		{
 			border_index.push_back(i);
 		}
 	}
+
 }
 
-void CloudTools::cloud_cluster(vector<vector<int>>& total_cluster_index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int limited_number)
+void CloudTools::cloud_cluster(vector<vector<int>>& total_cluster_index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,float radius, int limited_number)
 {
 	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;
 	kdtree.setInputCloud(cloud);
@@ -314,7 +463,7 @@ void CloudTools::cloud_cluster(vector<vector<int>>& total_cluster_index, pcl::Po
 	vector<bool> visited;
 	visited.resize(cloud->size(), false);
 	vector<int> single_cluster_index;
-
+	radius = m_cloud_cluster_search_radius;
 	for (int i = 0; i < cloud->size(); i++) {
 		if (visited[i] == false) {
 			visited[i] = true;
@@ -381,6 +530,7 @@ void CloudTools::adjust_radius(DETECTED_TYPE type, float& fitting_radius) {
 void CloudTools::fitting_hexagon_cloud_plane(
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 	pcl::PointCloud<pcl::PointXYZ>::Ptr std_cloud,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr vertex,
 	pcl::PointXYZ & center_point,
 	float & radius,
 	bool create_fitting_cloud,
@@ -401,10 +551,12 @@ void CloudTools::fitting_hexagon_cloud_plane(
 		return;
 	}
 
-	create_cloud_hexagon_plane(radius, std_cloud, center_point, x_step);
+	create_cloud_hexagon_plane(radius, std_cloud, vertex, center_point, x_step);
 	Eigen::Matrix4f transformation_matrix = Eigen::Matrix4f::Identity();
 	cloud_transform_matrix(std_cloud, cloud, transformation_matrix, maximum_iterations);
+
 	pcl::transformPointCloud(*std_cloud, *std_cloud, transformation_matrix);
+	pcl::transformPointCloud(*vertex, *vertex, transformation_matrix);
 }
 
 void CloudTools::find_center_point3d(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointXYZ & center_point) {
@@ -437,10 +589,10 @@ void CloudTools::fitting_circle_cloud_plane(
 		// Do nothing about circle_cloud
 		return;
 	}
-	// ÔÚÖ¸¶¨Ô²ĞÄÉú³ÉÒ»¸öÔ²ĞÎµãÔÆÊı¾İ£¬ÓÃÓÚÅä×¼
+	// åœ¨æŒ‡å®šåœ†å¿ƒç”Ÿæˆä¸€ä¸ªåœ†å½¢ç‚¹äº‘æ•°æ®ï¼Œç”¨äºé…å‡†
 	create_cloud_circle_plane(radius, circle_cloud, center_point, angle_step);
 
-	// Í¨¹ıĞı×ªµÃµ½×îÖÕµãÔÆ
+	// é€šè¿‡æ—‹è½¬å¾—åˆ°æœ€ç»ˆç‚¹äº‘
 	Eigen::Matrix4f transformation_matrix = Eigen::Matrix4f::Identity();
 	cloud_transform_matrix(circle_cloud, cloud, transformation_matrix, maximum_iterations);
 	pcl::transformPointCloud(*circle_cloud, *circle_cloud, transformation_matrix);
@@ -452,31 +604,40 @@ double CloudTools::function_hexagon(float x, float r) {
 
 void CloudTools::create_cloud_hexagon_plane(
 	float radius, 
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr vertex,
 	pcl::PointXYZ & center_point, 
 	float x_step) {
 
-	// ÔÚ[R/2,R]ÉÏ»­Áù±ßĞÎµÄÒ»Ìõ±ß
-	// Í¨¹ıĞı×ªÀ´µÃµ½ÍêÕûµÄÁù±ßĞÎ
+	// åœ¨[R/2,R]ä¸Šç”»å…­è¾¹å½¢çš„ä¸€æ¡è¾¹
+	// é€šè¿‡æ—‹è½¬æ¥å¾—åˆ°å®Œæ•´çš„å…­è¾¹å½¢
 	float
 		begin_x = radius / 2,
 		end_x = radius;
 
-	// »­³öÒ»ÌõÏß
-	pcl::PointXYZ point;
+	// ç”»å‡ºä¸€æ¡çº¿
+	pcl::PointCloud<pcl::PointXYZ>::Ptr point(new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr line_on_hexagon_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	// æ·»åŠ é¡¶ç‚¹
+	point->points.push_back(pcl::PointXYZ(
+		begin_x,
+		function_hexagon(begin_x, radius),
+		0));
+	
+	// æ·»åŠ ä¸€æ¡çº¿
 	for (float i = begin_x; i < end_x; i += x_step)
 	{
-		point = pcl::PointXYZ(
-			i,// + center_point.x,
-			function_hexagon(i, radius),// + center_point.y,
-			0//center_point.z
+		line_on_hexagon_cloud->points.push_back(
+			pcl::PointXYZ(
+				i,// + center_point.x,
+				function_hexagon(i, radius),// + center_point.y,
+				0//center_point.z
+			)
 		);
-		line_on_hexagon_cloud->points.push_back(point);
 	}
 
-	// ½«ÕâÌõÏßĞı×ª6´Î£¬Ã¿´Î60¶È
-	// Î§ÈÆzÖáĞı×ª
+	// å°†è¿™æ¡çº¿æ—‹è½¬6æ¬¡ï¼Œæ¯æ¬¡60åº¦
+	// å›´ç»•zè½´æ—‹è½¬
 	Eigen::Matrix4f transform = Eigen::Matrix4f::Identity();
 	float theta = M_PI / 3;
 	transform(0, 0) = cos(theta);
@@ -489,15 +650,24 @@ void CloudTools::create_cloud_hexagon_plane(
 	for (int i = 0; i < 6; ++i) {
 		*cloud += *line_on_hexagon_cloud;
 		pcl::transformPointCloud(*line_on_hexagon_cloud, *line_on_hexagon_cloud, transform);
+
+		*vertex += *point;
+		pcl::transformPointCloud(*point, *point, transform);
 	}
 	cloud->height = 1;
 	cloud->width = cloud->points.size();
 
-	// µ÷Õûµ½Ö¸¶¨ÖĞĞÄµã(Æ½ÒÆ×ø±êÏµ)
+	// è°ƒæ•´åˆ°æŒ‡å®šä¸­å¿ƒç‚¹(å¹³ç§»åæ ‡ç³»)
 	for (int i = 0; i < cloud->points.size(); ++i) {
 		cloud->points[i].x += center_point.x;
 		cloud->points[i].y += center_point.y;
 		cloud->points[i].z += center_point.z;
+	}
+	// è°ƒæ•´é¡¶ç‚¹åæ ‡åˆ°æŒ‡å®šä¸­å¿ƒç‚¹
+	for (int i = 0; i < vertex->points.size(); ++i) {
+		vertex->points[i].x += center_point.x;
+		vertex->points[i].y += center_point.y;
+		vertex->points[i].z += center_point.z;
 	}
 
 }
@@ -586,7 +756,7 @@ void CloudTools::plane_segment_recursion(
 
 	// cout << original_index <<"<->"<< compare_index <<endl;
 	// cout << single_plane_index.size()<<endl;
-	if (kdtree.radiusSearch(cloud->points[compare_index], m_plane_segment_search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
+	if (kdtree.radiusSearchT(cloud->points[compare_index], m_plane_segment_search_radius, pointIdxRadiusSearch, pointRadiusSquaredDistance) > 0)
 	{
 		for (size_t i = 1; i < pointIdxRadiusSearch.size(); ++i)
 		{
@@ -632,3 +802,50 @@ bool CloudTools::is_on_the_same_plane(pcl::PointNormal & p1, pcl::PointNormal& p
 	return angle < m_plane_segment_angle_threshold ? true : false;
 }
 
+double CloudTools::distance_point2plane(pcl::PointXYZ &p, Eigen::Vector4f & plane_func)
+{
+	// without judgement
+	return abs(plane_func[0] * p.x + plane_func[1] * p.y + plane_func[2] * p.z + plane_func[3]) /
+		sqrt(pow(plane_func[0], 2) + pow(plane_func[1], 2) + pow(plane_func[2], 2));
+	
+}
+
+void CloudTools::find_plane_function(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Vector4f & plane_func, float distance_threshold)
+{
+	pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+	// Create the segmentation object
+	pcl::SACSegmentation<pcl::PointXYZ> seg;
+	// Optional
+	seg.setOptimizeCoefficients(true);
+	// Mandatory
+	seg.setModelType(pcl::SACMODEL_PLANE);
+	seg.setMethodType(pcl::SAC_RANSAC);
+	seg.setDistanceThreshold(distance_threshold);
+
+	seg.setInputCloud(cloud);
+	seg.segment(*inliers, *coefficients);
+
+	plane_func = Eigen::Vector4f(
+		coefficients->values[0],
+		coefficients->values[1],
+		coefficients->values[2],
+		coefficients->values[3]
+	);
+}
+
+void CloudTools::find_points_on_plane(
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+	Eigen::Vector4f & plane_func,
+	vector<int> & index,
+	float distance_threshold
+	)
+{
+	for (int i = 0; i < cloud->points.size(); ++i)
+	{
+		if (distance_point2plane(cloud->points[i], plane_func) < distance_threshold)
+		{
+			index.push_back(i);
+		}
+	}
+}

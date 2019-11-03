@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 #include "Header.h"
 
 enum DETECTED_TYPE {
@@ -14,7 +14,7 @@ public:
 	CloudTools();
 
 public:
-	// ´æ´¢ Ë÷ÒıÏÂµÄµãÔÆ
+	// å­˜å‚¨ ç´¢å¼•ä¸‹çš„ç‚¹äº‘
 	template<typename INPUT_T, typename OUTPUT_T>
 	void index_vector_to_cloud(
 		vector<int>& indexVec,
@@ -30,41 +30,41 @@ public:
 		}
 	}
 
-	// ¼ÆËãÁ½¸öÏòÁ¿µÄ¼Ğ½Ç[0,360]
+	// è®¡ç®—ä¸¤ä¸ªå‘é‡çš„å¤¹è§’[0,360]
 	double vector_angle_360(pcl::PointXYZ& p1, pcl::PointXYZ& p2);
 
-	// ¼ÆËãÁ½¸öÏòÁ¿µÄ¼Ğ½Ç[0,180]
+	// è®¡ç®—ä¸¤ä¸ªå‘é‡çš„å¤¹è§’[0,180]
 	double vector_angle_180(pcl::PointXYZ& p1, pcl::PointXYZ& p2);
 
-	// »¡¶ÈÓë½Ç¶ÈÖ®¼äµÄ×ª»»
+	// å¼§åº¦ä¸è§’åº¦ä¹‹é—´çš„è½¬æ¢
 	double radian2angle(double radian);
 	double angle2radian(double angle);
 
 
-	// Í³¼ÆÂË²¨
+	// ç»Ÿè®¡æ»¤æ³¢
 	void filter_statistical_outlier_removal(
 		pcl::PointCloud<pcl::PointXYZ>::Ptr input_cloud,
 		pcl::PointCloud<pcl::PointXYZ>::Ptr output_cloud,
 		float mean_k, float std_thresh);
 
-	// ÌåËØÂË²¨
+	// ä½“ç´ æ»¤æ³¢
 	void filter_voxel_grid_downsample(
 		pcl::PCLPointCloud2::Ptr  input_cloud,
 		pcl::PCLPointCloud2::Ptr  output_cloud,
 		float leaf_size);
 
-	// ÅĞ¶ÏµãÔÆÊÇ·ñ°üº¬·¨ÏòÁ¿
+	// åˆ¤æ–­ç‚¹äº‘æ˜¯å¦åŒ…å«æ³•å‘é‡
 	bool is_contained_normal(pcl::PCLPointCloud2::Ptr cloud);
 
 
-	// ¼ÆËãµãÔÆµÄ·¨Ïò
+	// è®¡ç®—ç‚¹äº‘çš„æ³•å‘
 	void create_cloud_with_normal(
 		pcl::PCLPointCloud2::Ptr cloud,
 		pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normals,
 		float searchRadius = 0.8);
 
-	// Æ½Ãæ·Ö¸î
-	void plane_segment(
+	// å¹³é¢åˆ†å‰²
+	void segment_plane(
 		pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normal,
 		vector<vector<int>> &total_plane_group,
 		float search_radius,
@@ -94,28 +94,65 @@ public:
 		pcl::io::savePCDFile(filename, *cloud_with_rgb);
 	}
 
-	// ¸ù¾İ·¨ÏòÁ¿ÏÔÊ¾ÑÕÉ«
-	void color_using_normal(pcl::PCLPointCloud2::Ptr cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb);
-	
-	// ¸ù¾İµãÔÆ·Ö±æÂÊ¸øµãÔÆÉÏÉ«
-	// ºìÉ«->ÂÌÉ«: µãÔÆÃÜ¶È¸ß->µÍ
-	void color_using_resolution(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb, float radius = 1.0);
+	/*
+	* æ ¹æ®æ³•å‘é‡æ˜¾ç¤ºé¢œè‰²
+	* @cloud: 
+	*	PCLPointCloud2æ ¼å¼ï¼Œå¯ä»¥å¼ºåˆ¶è®¡ç®—æ³•å‘é‡ï¼Œä¹Ÿå¯ä»¥ä½¿ç”¨è‡ªå¸¦çš„æ³•å‘é‡ä¿¡æ¯
+	* @cloud_rgb:
+	*	è¾“å‡ºxyzrgbæ ¼å¼ï¼Œå¯ä»¥ç›´æ¥ç”¨äºæ˜¾ç¤º
+	* @force_to_normal:
+	*	ç”±äºPCLPointCloud2æ ¼å¼è¯»å–å¯èƒ½è‡ªå¸¦æ³•å‘é‡ä¿¡æ¯ï¼Œæ‰€ä»¥è¿™é‡Œå¯ä»¥é€‰æ‹©æ˜¯å¦å¼ºåˆ¶å†æ¬¡è®¡ç®—æ³•å‘é‡
+	*/
+	void color_using_normal(
+		pcl::PCLPointCloud2::Ptr cloud,
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb,
+		bool force_to_normal,
+		float radius = 0.8);
 
-	// ·Ö¸î±ß½ç
-	void border_segment(vector<int>& border_index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float min_angle);
-
-	// µãÔÆ¾ÛÀà(ÓÃÓÚÌáÈ¡³ö¶ÀÁ¢±ß½ç)
-	void cloud_cluster(vector<vector<int>> & total_cluster, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int limited_number);
+	// TODO:
+	// è¿™ä¸¤ä¸ªå‡½æ•°æœ‰å…±åŒä»£ç ï¼Œå¾…æ•´ç†
 
 	/*
-	* ÄâºÏÔ²ĞÎ£¬µÃµ½°ë¾¶ÒÔ¼°Ô²ĞÄ
-	* ¿ÉÒÔÑ¡ÔñĞÔ»ñµÃÔ²ĞÎµãÔÆ
-	* @center_point: µãÔÆÖØĞÄµã£¬ĞèÒªÌáÇ°ËãºÃ
-	* @radius: ÄâºÏ³öµÄ×î¼Ñ°ë¾¶(¶ÔÓÚÔ²ĞÎ¿ÉÖ±½ÓÊ¹ÓÃ£¬µ«ÊÇÆäËüÔòĞèÒªµ÷Õû)
-	* @create_fitting_cloud: ÓÃÓÚÅĞ¶ÏÊÇ·ñĞèÒªÓÃÓÚ»æÖÆµÄ±ê×¼µãÔÆ
-	* @radius_step: ÄâºÏ°ë¾¶Ê±µÄµİÔö²½³¤
-	* @angle_step: Éú³ÉÓÃÓÚ»æÖÆµÄ±ê×¼µãÔÆµÄ½Ç¶È²½³¤(note:²»ÊÇËùÓĞ±ê×¼Í¼ĞÎ³Æ´ËÃû)
-	* @maximum_iterations: ÓÃÓÚicpµÄµü´ú´ÎÊı, ´ÎÊı´óĞ¡¾ö¶¨×îÖÕ±ê×¼Í¼ĞÎÄâºÏĞ§¹û
+	* æ ¹æ®æ³•å‘é‡æ˜¾ç¤ºé¢œè‰²
+	* @cloud:
+	*	éœ€è¦è®¡ç®—æ³•å‘é‡çš„ç‚¹äº‘ï¼Œç›®å‰å¼ºåˆ¶ä¸ºxyzç‚¹äº‘
+	* @cloud_rgb:
+	*	è¾“å‡ºxyzrgbæ ¼å¼ï¼Œå¯ä»¥ç›´æ¥ç”¨äºæ˜¾ç¤º
+	* @radius:
+	*	è®¡ç®—æ³•å‘é‡æ—¶ä½¿ç”¨
+	*/
+	void color_using_normal(
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb,
+		float radius = 0.2);
+
+	/*
+	* æ ¹æ®ç‚¹äº‘åˆ†è¾¨ç‡ç»™ç‚¹äº‘ä¸Šè‰²
+	*
+	*
+	* æ˜¾ç¤ºçš„é¢œè‰²ç‰¹å¾ï¼š
+	*	çº¢è‰²->ç»¿è‰²: ç‚¹äº‘å¯†åº¦é«˜->ä½
+	*/
+	void color_using_resolution(
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+		pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud_rgb, 
+		float radius = 1.0);
+
+	// åˆ†å‰²è¾¹ç•Œ
+	void segment_plane_border(vector<int>& border_index, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, float min_angle);
+
+	// ç‚¹äº‘èšç±»(ç”¨äºæå–å‡ºç‹¬ç«‹è¾¹ç•Œ)
+	void cloud_cluster(vector<vector<int>> & total_cluster, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, int limited_number);
+
+	/*
+	* æ‹Ÿåˆåœ†å½¢ï¼Œå¾—åˆ°åŠå¾„ä»¥åŠåœ†å¿ƒ
+	* å¯ä»¥é€‰æ‹©æ€§è·å¾—åœ†å½¢ç‚¹äº‘
+	* @center_point: ç‚¹äº‘é‡å¿ƒç‚¹ï¼Œéœ€è¦æå‰ç®—å¥½
+	* @radius: æ‹Ÿåˆå‡ºçš„æœ€ä½³åŠå¾„(å¯¹äºåœ†å½¢å¯ç›´æ¥ä½¿ç”¨ï¼Œä½†æ˜¯å…¶å®ƒåˆ™éœ€è¦è°ƒæ•´)
+	* @create_fitting_cloud: ç”¨äºåˆ¤æ–­æ˜¯å¦éœ€è¦ç”¨äºç»˜åˆ¶çš„æ ‡å‡†ç‚¹äº‘
+	* @radius_step: æ‹ŸåˆåŠå¾„æ—¶çš„é€’å¢æ­¥é•¿
+	* @angle_step: ç”Ÿæˆç”¨äºç»˜åˆ¶çš„æ ‡å‡†ç‚¹äº‘çš„è§’åº¦æ­¥é•¿(note:ä¸æ˜¯æ‰€æœ‰æ ‡å‡†å›¾å½¢ç§°æ­¤å)
+	* @maximum_iterations: ç”¨äºicpçš„è¿­ä»£æ¬¡æ•°, æ¬¡æ•°å¤§å°å†³å®šæœ€ç»ˆæ ‡å‡†å›¾å½¢æ‹Ÿåˆæ•ˆæœ
 	*/	
 	void fitting_circle_cloud_plane(
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
@@ -130,18 +167,19 @@ public:
 	
 
 	/*
-	* ÄâºÏÁù±ßĞÎ£¬µÃµ½±ß³¤
-	* ¿ÉÒÔÑ¡ÔñĞÔ»ñµÃÁù±ßĞÎµãÔÆ
-	* @center_point: µãÔÆÖØĞÄµã£¬ĞèÒªÌáÇ°ËãºÃ
-	* @radius: ÄâºÏ³öµÄ×î¼Ñ°ë¾¶(¶ÔÓÚÔ²ĞÎ¿ÉÖ±½ÓÊ¹ÓÃ£¬µ«ÊÇÆäËüÔòĞèÒªµ÷Õû)
-	* @create_fitting_cloud: ÓÃÓÚÅĞ¶ÏÊÇ·ñĞèÒªÓÃÓÚ»æÖÆµÄ±ê×¼µãÔÆ
-	* @radius_step: ÄâºÏ°ë¾¶Ê±µÄµİÔö²½³¤
-	* @x_step: Éú³ÉÓÃÓÚ»æÖÆµÄ±ê×¼µãÔÆµÄx·½Ïò²½³¤(note:²»ÊÇËùÓĞ±ê×¼Í¼ĞÎ³Æ´ËÃû)
-	* @maximum_iterations: ÓÃÓÚicpµÄµü´ú´ÎÊı, ´ÎÊı´óĞ¡¾ö¶¨×îÖÕ±ê×¼Í¼ĞÎÄâºÏĞ§¹û
+	* æ‹Ÿåˆå…­è¾¹å½¢ï¼Œå¾—åˆ°è¾¹é•¿
+	* å¯ä»¥é€‰æ‹©æ€§è·å¾—å…­è¾¹å½¢ç‚¹äº‘
+	* @center_point: ç‚¹äº‘é‡å¿ƒç‚¹ï¼Œéœ€è¦æå‰ç®—å¥½
+	* @radius: æ‹Ÿåˆå‡ºçš„æœ€ä½³åŠå¾„(å¯¹äºåœ†å½¢å¯ç›´æ¥ä½¿ç”¨ï¼Œä½†æ˜¯å…¶å®ƒåˆ™éœ€è¦è°ƒæ•´)
+	* @create_fitting_cloud: ç”¨äºåˆ¤æ–­æ˜¯å¦éœ€è¦ç”¨äºç»˜åˆ¶çš„æ ‡å‡†ç‚¹äº‘
+	* @radius_step: æ‹ŸåˆåŠå¾„æ—¶çš„é€’å¢æ­¥é•¿
+	* @x_step: ç”Ÿæˆç”¨äºç»˜åˆ¶çš„æ ‡å‡†ç‚¹äº‘çš„xæ–¹å‘æ­¥é•¿(note:ä¸æ˜¯æ‰€æœ‰æ ‡å‡†å›¾å½¢ç§°æ­¤å)
+	* @maximum_iterations: ç”¨äºicpçš„è¿­ä»£æ¬¡æ•°, æ¬¡æ•°å¤§å°å†³å®šæœ€ç»ˆæ ‡å‡†å›¾å½¢æ‹Ÿåˆæ•ˆæœ
 	*/
 	void fitting_hexagon_cloud_plane(
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 		pcl::PointCloud<pcl::PointXYZ>::Ptr std_cloud,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr vertex_vec,
 		pcl::PointXYZ & center_point,
 		float & radius,
 		bool create_fitting_cloud = true,
@@ -150,8 +188,26 @@ public:
 		int maximum_iterations = 50 // for geting fittness matrix
 	);
 
-	// ÕÒµãÔÆµÄÖØĞÄ×ø±ê
+	// æ‰¾ç‚¹äº‘çš„é‡å¿ƒåæ ‡
 	void find_center_point3d(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,pcl::PointXYZ & center_point);
+
+	// è®¡ç®—å¹³é¢æ–¹ç¨‹
+	void find_plane_function(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, Eigen::Vector4f & plane_func, float distance_threshold = 0.02);
+	
+	/*
+	* æ‰¾åˆ°åœ¨å¹³é¢ä¸Šçš„ç‚¹
+	* @cloud: å¹³é¢æ‰€åœ¨çš„ç‚¹äº‘
+	* @plane_func: å¹³é¢æ–¹ç¨‹
+	* @index: åœ¨å¹³é¢ä¸Šçš„ç‚¹çš„ç´¢å¼•
+	* @distance_threshold: åœ¨è¿™ä¸ªèŒƒå›´å†…çš„ç‚¹å°†è¢«è§†ä¸ºåœ¨å¹³é¢ä¸Š
+	*/
+	void find_points_on_plane(
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+		Eigen::Vector4f & plane_func,
+		vector<int> & index,
+		float distance_threshold
+	);
+
 private:
 
 	// common
@@ -159,6 +215,7 @@ private:
 	void find_fitting_radius(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointXYZ & center_point,float & radius,float radius_step = 0.01);
 	void adjust_radius(DETECTED_TYPE type, float &fitting_radius);
 	double vector_distance(pcl::PointXYZ & p1, pcl::PointXYZ &p2);
+	double distance_point2plane(pcl::PointXYZ &p, Eigen::Vector4f & plane_func);
 	void cloud_transform_matrix(
 		pcl::PointCloud<pcl::PointXYZ>::Ptr source_cloud,
 		pcl::PointCloud<pcl::PointXYZ>::Ptr target_cloud,
@@ -212,6 +269,7 @@ private:
 	void create_cloud_hexagon_plane(
 		float radius, 
 		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+		pcl::PointCloud<pcl::PointXYZ>::Ptr vertex,
 		pcl::PointXYZ & center_point,
 		float x_step = 0.01);
 	double function_hexagon(float x, float r);
