@@ -693,7 +693,7 @@ bool CloudTools::is_parallel(const Line_func& l1, const Line_func& l2, double th
 		r2 = l1.v[4] / l2.v[4],
 		r3 = l1.v[5] / l2.v[5];
 
-	//cout << r1 << " " << r2 << " " << r3 << endl;
+	cout << r1 << " " << r2 << " " << r3 << endl;
 
 	if (abs(r1 - r2) < threshold && abs(r2 - r3) < threshold && abs(r1 - r3) < threshold)
 	{

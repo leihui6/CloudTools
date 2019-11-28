@@ -138,6 +138,12 @@ public:
 
 	//! 获取点云中心坐标
 	void get_cloud_center_point(pointT & p);
+
+	//! 清楚上次所有计算数据
+	void clear();
+
+	//! 设置是否保存处理过程的数据
+	void set_is_save_process_data(bool is_save);
 private:
 
 	//! 加载包括侧面以及底面的全部平面点云数据以及对应方程
@@ -197,9 +203,6 @@ private:
 
 	*/
 	void self_calc_cylinder_func(double threshold_dis = 0.8);
-
-	//! 清楚上次所有计算数据
-	void clear();
 
 private:
 	//! 数据处理工具
@@ -277,5 +280,8 @@ private:
 
 	//! 向内移动一定距离的点到顶面的距离
 	vector<double> m_bottom_inner_distance;
+
+	//! 设置是否保存处理过程
+	bool m_is_save_process_data;
 };
 

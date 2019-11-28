@@ -2,7 +2,7 @@
 
 WorkPiece::WorkPiece()
 {
-
+	m_is_save_process_data = false;
 }
 
 WorkPiece::~WorkPiece()
@@ -89,14 +89,16 @@ void WorkPiece::load_all_plane(vector<pcl::PointCloud<pointT>::Ptr>& cloud_vec)
 	}
 	load_beside_plane(bottom_cloud_vec);
 
-	//test
-	//pcl::io::savePCDFileBinary("bottom_cloud.pcd", *m_bottom_cloud);
-	//for (size_t i = 0; i < m_beside_cloud_vec.size(); ++i)
-	//{
-	//	pcl::io::savePCDFileBinary("beside_cloud" + to_string(i) + ".pcd", *m_beside_cloud_vec[i]);
-	//}
+	// 用于测试显示
+	if (m_is_save_process_data)
+	{
+		pcl::io::savePCDFileBinary("bottom_cloud.pcd", *m_bottom_cloud);
+		for (size_t i = 0; i < m_beside_cloud_vec.size(); ++i)
+		{
+			pcl::io::savePCDFileBinary("beside_cloud" + to_string(i) + ".pcd", *m_beside_cloud_vec[i]);
+		}
+	}
 }
-
 void WorkPiece::load_beside_plane(vector<pcl::PointCloud<pointT>::Ptr>& cloud_vec)
 {
 	if (cloud_vec.empty())
@@ -149,21 +151,16 @@ void WorkPiece::load_beside_plane(vector<pcl::PointCloud<pointT>::Ptr>& cloud_ve
 
 		Eigen::Vector4f plane_func;
 
-		m_cloud_tools.find_plane_function(cloud_vec[cloud_index_vec[i]], plane_func, 10e-5);
+		m_cloud_tools.find_plane_function(cloud_vec[cloud_index_vec[i]], plane_func, 10e-6);
 
 		m_beside_plane_func_vec.push_back(plane_func);
 	}
-
-	//for (int i=0;i< m_beside_cloud_vec.size();++i)
-	//{
-	//	pcl::io::savePCDFileASCII("test_plane_order" + std::to_string(i) + ".pcd", *m_beside_cloud_vec[i]);
-	//}
 }
 
 void WorkPiece::load_bottom_plane(pcl::PointCloud<pointT>::Ptr bottom_cloud)
 {
 	m_bottom_cloud = bottom_cloud;
-	m_cloud_tools.find_plane_function(bottom_cloud, m_bottom_plane_func,10e-4);
+	m_cloud_tools.find_plane_function(bottom_cloud, m_bottom_plane_func,10e-6);
 }
 
 void WorkPiece::get_bottom_cloud(pcl::PointCloud<pointT>::Ptr bottom_cloud)
@@ -266,15 +263,18 @@ void WorkPiece::self_calc_bottom_intersection_of_point()
 		m_bottom_intersection_of_point_vec.push_back(p);
 	}
 
-	//! 获取顶点点云数据
-	//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	//for (int i=0;i< m_bottom_intersection_of_point_vec.size();++i)
-	//{
-	//	cloud->points.push_back(m_bottom_intersection_of_point_vec[i]);
-	//}
-	//cloud->height = 1;
-	//cloud->width = cloud->points.size();
-	//pcl::io::savePCDFileBinary("vex.pcd",*cloud);
+	//! 测试顶点点云数据是否计算正确
+	if (m_is_save_process_data)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+		for (int i = 0; i < m_bottom_intersection_of_point_vec.size(); ++i)
+		{
+			cloud->points.push_back(m_bottom_intersection_of_point_vec[i]);
+		}
+		cloud->height = 1;
+		cloud->width = cloud->points.size();
+		pcl::io::savePCDFileBinary("vertex.pcd", *cloud);
+	}
 }
 
 void WorkPiece::self_calc_cylinder_func(double threshold_dis)
@@ -386,6 +386,11 @@ void WorkPiece::clear()
 
 }
 
+void WorkPiece::set_is_save_process_data(bool is_save)
+{
+	m_is_save_process_data = is_save;
+}
+
 void WorkPiece::self_calc_plane_func()
 {
 	pcl::PointCloud<pcl::PointNormal>::Ptr cloud_normal(new pcl::PointCloud<pcl::PointNormal>);
@@ -461,11 +466,13 @@ void WorkPiece::self_remove_cylinder_cloud(double threshold_dis)
 		}
 	}
 
-	// test
-	CloudTools cloud_tools;
-	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	m_cloud_tools.index_vector_to_cloud<pointT>(m_original_cloud_without_cylinder_index, *m_original_cloud, *cloud);
-	pcl::io::savePCDFileBinary("removed_cylinder_cloud.pcd", *cloud);
+	// 用于测试，用于查看圆柱面去除是否正常
+	if (m_is_save_process_data)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+		m_cloud_tools.index_vector_to_cloud<pointT>(m_original_cloud_without_cylinder_index, *m_original_cloud, *cloud);
+		pcl::io::savePCDFileBinary("removed_cylinder_cloud.pcd", *cloud);
+	}
 }
 
 void WorkPiece::detect_defect_part_on_bottom_plane()
@@ -667,11 +674,14 @@ void WorkPiece::detect_max_dis_bottom_line()
 		//for (size_t j = i + 1; j < line_size; ++j)
 		//{
 		Line_func & l_b = m_bottom_intersection_of_line_vec[j];
-		//cout << i << " l_a:" << l_a << " l_b" << l_b << endl;
+		if (m_is_save_process_data)
+		{
+			cout << i << " l_a:" << l_a << endl << " l_b" << l_b << endl;
+		}
 		//cout << m_cloud_tools.distance_between_two_plane(m_beside_plane_func_vec[i], m_beside_plane_func_vec[j]) << endl;
 
 		// 判断两直线是否平行
-		if (m_cloud_tools.is_parallel(l_a, l_b, 0.09))
+		if (m_cloud_tools.is_parallel(l_a, l_b, 0.25))
 		{
 			//cout << i << "->" << j << endl;
 			
@@ -756,14 +766,18 @@ void WorkPiece::get_max_dis_bottom_line_segment(vector<pointT>& point_vec, vecto
 		dis_vec.push_back(cd.distance);
 	}
 
-	//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	//for (int i = 0; i < point_vec.size(); ++i)
-	//{
-	//	cloud->points.push_back(point_vec[i]);
-	//}
-	//cloud->height = 1;
-	//cloud->width = cloud->points.size();
-	//pcl::io::savePCDFileBinary("max_line.pcd",*cloud);
+	// 用于测试，查看最大边是否检测正确
+	if (m_is_save_process_data)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+		for (int i = 0; i < point_vec.size(); ++i)
+		{
+			cloud->points.push_back(point_vec[i]);
+		}
+		cloud->height = 1;
+		cloud->width = cloud->points.size();
+		pcl::io::savePCDFileBinary("max_line(points).pcd", *cloud);
+	}
 }
 
 void WorkPiece::detect_bottom_inner_point_along_with_line(double dis)
@@ -850,15 +864,18 @@ void WorkPiece::detect_bottom_inner_point_along_with_line(double dis)
 		m_bottom_inner_distance[i] = dis;
 	}
 
-	//test 验证保存inner点集
-	//pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
-	//for (int i = 0; i < m_bottom_innner_points.size(); ++i)
-	//{
-	//	cloud->points.push_back(m_bottom_innner_points[i]);
-	//}
-	//cloud->height = 1;
-	//cloud->width = cloud->points.size();
-	//pcl::io::savePCDFileBinary("inner_points.pcd", *cloud);
+	// 验证inner点集
+	if (m_is_save_process_data)
+	{
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud(new pcl::PointCloud<pcl::PointXYZ>);
+		for (int i = 0; i < m_bottom_innner_points.size(); ++i)
+		{
+			cloud->points.push_back(m_bottom_innner_points[i]);
+		}
+		cloud->height = 1;
+		cloud->width = cloud->points.size();
+		pcl::io::savePCDFileBinary("inner_points.pcd", *cloud);
+	}
 }
 
 void WorkPiece::get_bottom_inner_point_along_with_line(vector<pointT>& inner_points, vector<double> & dis_vec)
