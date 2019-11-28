@@ -6,7 +6,8 @@
 #include<random>
 #include<ctime>
 #include<list>
-#include <fstream>
+#include <algorithm>
+#include <map>
 using namespace std;
 
 
@@ -28,12 +29,6 @@ using namespace std;
 #include <pcl/features/boundary.h>
 #include <pcl/segmentation/extract_clusters.h>
 #include <pcl/filters/extract_indices.h>
-#include <pcl/common/intersections.h>
-#include <pcl/ModelCoefficients.h>
-#include <pcl/features/moment_of_inertia_estimation.h>
-#include <pcl/filters/project_inliers.h>
-#include <pcl/visualization/pcl_visualizer.h>
-#include <pcl/segmentation/conditional_euclidean_clustering.h>
 using namespace pcl;
 
 
