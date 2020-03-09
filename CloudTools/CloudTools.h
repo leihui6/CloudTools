@@ -1,17 +1,4 @@
-﻿//========================================================
-/**
-*  @file      CloudTools.h
-*
-*  项目描述:	三类刹车片的表面缺陷以及基本几何尺寸的检测
-*  文件描述:	核心点云计算工具库
-*  适用平台:	Windows10
-*  作    者:	LeiHui Li@  Wang_RiWei@
-*  项 目 组:	智能计算研发一组
-*  公    司:	天津微深联创科技有限公司
-*
-//========================================================
-*/
-#pragma once
+﻿#pragma once
 
 #include "CloudTools_Header.h"
 
@@ -576,6 +563,15 @@ public:
 		vector<int>& plane_points_index_2,
 		float ratio, float &distance);
 
+	//! 计算两个点集之间的距离
+	void distance_between_two_lines(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+		vector<int>& plane_points_index_1,
+		vector<int>& plane_points_index_2,
+		float ratio, float &distance);
+
+	//! 给定点云找到直线方程
+	void find_line_function(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<int> &process_index, Line_func & lin_func, float distance_threshold);
+
 	//! 格式化点云
 	template <typename T>
 	void standardize_not_organized_cloud_header(pcl::PointCloud<T> & cloud) {
@@ -682,6 +678,13 @@ public:
 		float dis_limit
 	);
 
+	void remove_points_from_cylinder_func(
+		pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+		vector<Cylinder_func>& func_vec,
+		vector<vector<int>> & oncylinder_index,
+		vector<int>& rest_index,
+		float dis_limit);
+
 	//! 将以Eigen::Vector4f表示的点转换为 pointxyz格式
 	void convert_vector4f_to_pointxyz(const Eigen::Vector4f &v, pcl::PointXYZ &p);
 
@@ -759,21 +762,34 @@ public:
 	\param[in] cloud 点云
 	\param[in] process_index 待处理索引
 	\param[in] radius 半径
-	\param[out] center_point 圆的中心点
 	\param[out] circle_center_point_vec 圆心集合
 	\param[in] deviation_threshold 用于判断的反差阈值
 
 	*/
 	void find_semi_circle_on_border(
-		pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud, float radius,
-		pcl::PointXYZ & center_point,
+		pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud, 
+		float radius,
 		std::vector<pcl::PointXYZ> & circle_center_point_vec,
 		float deviation_threshold = 0.05);
 
 	//! 计算一个点到一个点集的距离方差
 	void deviation_distance_point_to_points(
-		pcl::PointXYZ & p, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, 
+		pcl::PointXYZ & p, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
 		std::vector<int> &process_index, float &average_distance);
+
+	//! 获得最大包围盒的长宽高
+	void max_box_deltaXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float &delta_x, float&delta_y, float&delta_z);
+
+	//! 计算投影平面的几何尺寸,先计算投影到YZ平面的点云
+	/*
+	\param[in] cloud 经过投影的点云
+	\param[out] width 宽度
+	\param[out] height 高度
+	*/
+	void projected_plane_size(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float & width, float &height);
+
+	//! 收集在某直线方程上的点集
+	void collect_points_on_lines(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<Line_func> & line_func_vec, vector<vector<int>> & index_vec, float threshold = 1.0);
 
 private:
 	float m_plane_segment_angle_threshold;

@@ -1,17 +1,4 @@
-﻿//========================================================
-/**
-*  @file      CloudTools.cpp
-*
-*  项目描述:	三类刹车片的表面缺陷以及基本几何尺寸的检测
-*  文件描述:	核心点云计算工具库实现
-*  适用平台:	Windows10
-*  作    者:	LeiHui Li@  Wang_RiWei@
-*  项 目 组:	智能计算研发一组
-*  公    司:	天津微深联创科技有限公司
-*
-//========================================================
-*/
-#pragma once
+﻿#pragma once
 #include "CloudTools.h"
 
 void Line_func::convert_to_vectorxf(Eigen::VectorXf& vx)
@@ -1033,6 +1020,80 @@ void CloudTools::remove_points_from_cylinder_func(
 	//}
 }
 
+
+void CloudTools::remove_points_from_cylinder_func(
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	vector<Cylinder_func>& func_vec,
+	vector<vector<int>> & oncylinder_index,
+	vector<int>& rest_index,
+	float dis_limit)
+{
+	vector<Eigen::Vector4f> line_pt_vec, line_dir_vec;
+	vector<float> r_vec;
+
+	oncylinder_index.resize(func_vec.size());
+
+	for (size_t i = 0; i < func_vec.size(); ++i)
+	{
+		Eigen::Vector4f line_pt, lint_dir;
+		float r;
+
+		func_vec[i].get_center_line(line_pt, lint_dir);
+
+		r = func_vec[i].v[6];
+
+		line_pt_vec.push_back(line_pt);
+		line_dir_vec.push_back(lint_dir);
+		r_vec.push_back(r);
+	}
+
+	for (size_t i = 0; i < cloud->points.size(); ++i)
+	{
+		bool is_on_cylinder = false;
+
+		int p_i = i, cylinder_i = -1;
+
+		pcl::PointXYZ &p = cloud->points[p_i];
+
+		// 分别计算到各个圆柱面的距离
+		for (size_t j = 0; j < func_vec.size(); ++j)
+		{
+			double dis = 0.0, r = r_vec[j];
+
+			dis = pcl::sqrPointToLineDistance(p.getVector4fMap(), line_pt_vec[j], line_dir_vec[j]);
+
+			dis = sqrt(dis);
+
+			// 若在圆柱面内部，这个r一般大于实际圆柱面的半径
+			if (dis - r < 0 || abs(dis - r) < dis_limit)
+			{
+				is_on_cylinder = true;
+				cylinder_i = j;
+				break;
+			}
+		}
+
+		if (!is_on_cylinder)
+		{
+			rest_index.push_back(p_i);
+		}
+		else
+		{
+			oncylinder_index[cylinder_i].push_back(p_i);
+		}
+	}
+
+	//cout << "去除侧面圆柱点集数量=" << rest_index.size() << endl;
+
+	// 用于测试，用于查看圆柱面去除是否正常
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr save_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	//index_vector_to_cloud<pcl::PointXYZ>(rest_index, *cloud, *save_cloud);
+	//if (!save_cloud->empty())
+	//{
+	//	pcl::io::savePCDFileBinary("removed_cylinder_cloud.pcd", *save_cloud);
+	//}
+}
+
 void CloudTools::convert_vector4f_to_pointxyz(const Eigen::Vector4f & v, pcl::PointXYZ & p)
 {
 	p.x = v[0];
@@ -1087,18 +1148,30 @@ bool CloudTools::is_parallel(const Eigen::Vector3f & v1, const Eigen::Vector3f &
 	{
 		r1 = 0;
 	}
-	else if (v1[1] == 0 || v2[1] == 0)
+	if (v1[1] == 0 || v2[1] == 0)
 	{
 		r2 = 0;
 	}
-	else if (v1[2] == 0 || v2[2] == 0)
+	if (v1[2] == 0 || v2[2] == 0)
 	{
 		r3 = 0;
 	}
 
 	//cout << r1 << " " << r2 << " " << r3 << endl;
 
-	if (r1 == 0)
+	if (r1 == 0 && r2 == 0)
+	{
+		return r3 > 0;
+	}
+	else if(r1 == 0 && r3 == 0)
+	{
+		return r2 > 0;
+	}
+	else if (r2 == 0 && r3 == 0)
+	{
+		return r1 > 0;
+	}
+	else if (r1 == 0)
 	{
 		if (abs(r2 - r3) < threshold && abs(r3 - r2) < threshold)
 		{
@@ -1168,6 +1241,11 @@ bool CloudTools::is_on_plane(const pcl::PointXYZ & p, const Eigen::Vector4f & pl
 
 void CloudTools::find_point_along_with_vector_within_dis(pcl::PointXYZ & p, Eigen::Vector3f & line_dir, pcl::PointXYZ &result_p, float d, bool is_ahead)
 {
+	if (d == 0)
+	{
+		result_p = p;
+		return;
+	}
 	double m, n, l;
 	m = line_dir[0];
 	n = line_dir[1];
@@ -1850,8 +1928,8 @@ void CloudTools::find_point_vetical_to_plane(pcl::PointXYZ & p, Eigen::Vector4f 
 }
 
 void CloudTools::find_semi_circle_on_border(
-	pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud, float radius, 
-	pcl::PointXYZ & center_point,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr & cloud, 
+	float radius, 
 	std::vector<pcl::PointXYZ> & circle_center_point_vec,
 	float deviation_threshold)
 {
@@ -1902,12 +1980,24 @@ void CloudTools::find_semi_circle_on_border(
 		{
 			circle_center_cloud->points.push_back(circle_center_point);
 		}
+
+		//ofile << tmp_dis << " ";
 	}
+	//ofile << endl;
+	//ofile.close();
+
+	if (circle_center_cloud->empty())
+	{
+		return;
+	}
+
+	//pcl::PointCloud<pcl::PointXYZ>::Ptr test(new pcl::PointCloud<pcl::PointXYZ>);
+	//pcl::io::savePCDFileBinary("semi_circle.pcd", *circle_center_cloud);
 
 	std::vector<std::vector<int>> total_cluster;
 	cloud_cluster(circle_center_cloud, total_cluster, 1.0, 0);
 
-	cout << "there are " << total_cluster.size() << " circle points" << endl;
+	cout << "there are " << total_cluster.size() << " semi-circle." << endl;
 
 	for (auto &i: total_cluster)
 	{
@@ -1945,7 +2035,156 @@ void CloudTools::deviation_distance_point_to_points(pcl::PointXYZ & p, pcl::Poin
 	{
 		total_dis = total_dis + (i - average_distance) * (i - average_distance);
 	}
-	average_distance = total_dis / process_index.size();
+	average_distance = sqrt(total_dis / process_index.size());
+}
+
+void CloudTools::max_box_deltaXYZ(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float &delta_x, float &delta_y, float &delta_z)
+{
+	Eigen::Vector4f minpt, maxpt;
+
+	pcl::getMinMax3D(*cloud, minpt, maxpt);
+
+	delta_x = maxpt[0] - minpt[0];
+	delta_y = maxpt[1] - minpt[1];
+	delta_z = maxpt[2] - minpt[2];
+}
+
+void CloudTools::projected_plane_size(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float & width, float &height)
+{
+	// projected to YZ plane, so x is 0
+	Eigen::Vector4f min_pt, max_pt;
+
+	pcl::getMinMax3D(*cloud, min_pt, max_pt);
+
+	std::vector<pcl::PointXYZ> corner_point(4);
+
+	corner_point[0] = pcl::PointXYZ(0, min_pt[1], min_pt[2]);
+	corner_point[1] = pcl::PointXYZ(0, min_pt[1], max_pt[2]);
+	corner_point[2] = pcl::PointXYZ(0, max_pt[1], min_pt[2]);
+	corner_point[3] = pcl::PointXYZ(0, max_pt[1], max_pt[2]);
+
+	float d0, d1, d2;
+	d0 = max_pt[0] - min_pt[0];
+	d1 = max_pt[1] - min_pt[1];
+	d2 = max_pt[2] - min_pt[2];
+
+	if (d0 == 0)
+	{
+		width = d1;
+		height = d2;
+	}
+	else if (d1 == 0)
+	{
+		width = d0;
+		height = d2;
+	}
+	else
+	{
+		width = d0;
+		height = d1;
+	}
+
+
+	//std::vector<pcl::PointXYZ> ordered_corner_point;
+	//ordered_corner_point.push_back(corner_point[0]);
+	//corner_point.erase(corner_point.begin());
+
+	//size_t j = 0;
+	//while (!corner_point.empty())
+	//{
+	//	std::vector<pcl::PointXYZ>::iterator it = corner_point.end();
+	//	float distance = FLT_MAX;
+
+	//	for (std::vector<pcl::PointXYZ>::iterator i = corner_point.begin(); i != corner_point.end(); i++)
+	//	{
+	//		float d = 0.0;
+	//		d = pcl::geometry::distance(ordered_corner_point.back(), *i);
+	//		if (d < distance)
+	//		{
+	//			distance = d;
+	//			it = i;
+	//		}
+	//	}
+	//	if (it != corner_point.end())
+	//	{
+	//		ordered_corner_point.push_back(*it);
+	//		corner_point.erase(it);
+	//	}
+	//}
+
+	//// all done, we got ordered corner point set.
+	//cout
+	//	<< "L1=" << pcl::geometry::distance(ordered_corner_point[0], ordered_corner_point[1]) 
+	//	<< " L2=" << pcl::geometry::distance(ordered_corner_point[1], ordered_corner_point[2])
+	//	<< " L3=" << pcl::geometry::distance(ordered_corner_point[2], ordered_corner_point[3])
+	//	<< " L4=" << pcl::geometry::distance(ordered_corner_point[3], ordered_corner_point[0])
+	//	<< endl;
+
+	//vector<Line_func>line_func_vec(4);
+
+	//for (size_t i = 0; i < ordered_corner_point.size(); ++i)
+	//{
+	//	pcl::PointXYZ &p = ordered_corner_point[i];
+	//	line_func_vec[i].v[0] = p.x;
+	//	line_func_vec[i].v[1] = p.y;
+	//	line_func_vec[i].v[2] = p.z;
+
+	//	pcl::PointXYZ &p2 = ordered_corner_point[(i + 1) % ordered_corner_point.size()];
+	//	line_func_vec[i].v[3] = p2.x - p.x;
+	//	line_func_vec[i].v[4] = p2.y - p.y;
+	//	line_func_vec[i].v[5] = p2.z - p.z;
+	//}
+
+	//// line_func[0] <=> line_func[2]
+	//// line_func[1] <=> line_func[3]
+	//vector<vector<int>> index_vec;
+	//collect_points_on_lines(cloud, line_func_vec, index_vec,3.0);
+	//
+	//// test for line's point cloud
+	////for (size_t i = 0; i < index_vec.size(); ++i)
+	////{
+	////	pcl::PointCloud<pcl::PointXYZ>::Ptr save_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	////	index_vector_to_cloud(index_vec[i], *cloud, *save_cloud);
+	////	pcl::io::savePCDFileBinary("line_cloud" + std::to_string(i) + ".pcd", *save_cloud);
+	////}
+
+	//float dis_0_2 = 0.0, dis_1_3 = 0.0;
+
+	//distance_between_two_lines(cloud, index_vec[0], index_vec[2], 0.1, dis_0_2);
+
+	//distance_between_two_lines(cloud, index_vec[1], index_vec[3], 0.1, dis_1_3);
+	//cout
+	//	<< "dis_0_2=" << dis_0_2
+	//	<< "dis_1_3=" << dis_1_3
+	//	<< endl;
+
+}
+
+void CloudTools::collect_points_on_lines(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<Line_func> & line_func_vec, vector<vector<int>> & index_vec, float threshold)
+{
+	index_vec.resize(line_func_vec.size());
+
+	for (size_t i = 0; i < cloud->points.size(); ++i)
+	{
+		pcl::PointXYZ &p = cloud->points[i];
+
+		size_t line_j = -1;
+
+		for (size_t j = 0; j < line_func_vec.size(); ++j)
+		{
+			Eigen::Vector4f line_pt, line_dir;
+			line_func_vec[j].convert_to_vector4f(line_pt, line_dir);
+			float d = pcl::sqrPointToLineDistance(p.getVector4fMap(), line_pt, line_dir);
+
+			d = sqrt(d);
+			if (d < threshold)
+			{
+				line_j = j;
+
+				index_vec[line_j].push_back(i);
+			}
+		}
+	}
 }
 
 
@@ -1978,7 +2217,7 @@ double CloudTools::distance_between_two_plane(Eigen::Vector4f & plane_func1, Eig
 
 void CloudTools::distance_between_two_plane(
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
-	vector<int>& plane_points_index_1, 
+	vector<int>& plane_points_index_1,
 	vector<int>& plane_points_index_2,
 	float ratio, float & distance)
 {
@@ -2003,9 +2242,9 @@ void CloudTools::distance_between_two_plane(
 		for (size_t j = 0; j < plane_points_index_2.size(); ++j)
 		{
 			int tar_j = plane_points_index_2[j];
-			
+
 			pcl::PointXYZ &p_j = cloud->points[tar_j];
-			
+
 			dis = pcl::geometry::distance(p_i, p_j);
 
 			if (dis < min_dis)
@@ -2016,7 +2255,78 @@ void CloudTools::distance_between_two_plane(
 		dis_vec.push_back(min_dis);
 	}
 
-	//std::sort(dis_vec.begin(), dis_vec.end());
+	std::sort(dis_vec.begin(), dis_vec.end());
+
+	size_t b = ratio * dis_vec.size();
+
+	float total_dis = 0.0;
+
+	for (size_t i = 0; i < b; ++i)
+	{
+		total_dis += dis_vec[i];
+	}
+	distance = total_dis / b;
+}
+
+void CloudTools::distance_between_two_lines(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,
+	vector<int>& plane_points_index_1,
+	vector<int>& plane_points_index_2,
+	float ratio, float &distance)
+{
+	if (ratio < 0 || ratio > 1)
+	{
+		cerr << "[error] ratio must be 0 to 1" << endl;
+		return;
+	}
+
+	Line_func line_1;
+	find_line_function(cloud, plane_points_index_1, line_1, 0.1);
+	Eigen::Vector3f dire_ptr;
+	line_1.get_direction(dire_ptr);
+
+	vector<float>dis_vec;
+
+	float dis = 0.0;
+
+	for (size_t i = 0; i < plane_points_index_1.size(); ++i)
+	{
+		int tar_i = plane_points_index_1[i];
+
+		pcl::PointXYZ &p_i = cloud->points[tar_i];
+
+		float dis = 0.0, min_dis = FLT_MAX;
+
+		size_t min_dis_j = 0;
+		for (size_t j = 0; j < plane_points_index_2.size(); ++j)
+		{
+			int tar_j = plane_points_index_2[j];
+
+			pcl::PointXYZ &p_j = cloud->points[tar_j];
+
+			dis = pcl::geometry::distance(p_i, p_j);
+
+			if (dis < min_dis)
+			{
+				min_dis_j = tar_j;
+
+				min_dis = dis;
+			}
+		}
+
+		pcl::PointXYZ p1;
+		p1.x = cloud->points[min_dis_j].x - p_i.x;
+		p1.y = cloud->points[min_dis_j].y - p_i.y;
+		p1.z = cloud->points[min_dis_j].z - p_i.z;
+
+		//if ()
+		//{
+
+		//}
+
+		dis_vec.push_back(min_dis);
+	}
+
+	std::sort(dis_vec.begin(), dis_vec.end());
 
 	size_t b = ratio * dis_vec.size();
 
@@ -2103,6 +2413,30 @@ void CloudTools::find_circle3d_function(pcl::PointCloud<pcl::PointXYZ>::Ptr clou
 	circle3d_func.swap(coefficients->values);
 }
 
+void CloudTools::find_line_function(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::vector<int> &process_index, Line_func & lin_func, float distance_threshold)
+{
+	pcl::ModelCoefficients::Ptr coefficients(new pcl::ModelCoefficients);
+	pcl::PointIndices::Ptr inliers(new pcl::PointIndices);
+	// Create the segmentation object
+	pcl::SACSegmentation<pcl::PointXYZ> seg;
+	// Optional
+	//seg.setOptimizeCoefficients(true);
+	// Mandatory
+	seg.setModelType(pcl::SACMODEL_LINE);
+	seg.setMethodType(pcl::SAC_LMEDS);
+	seg.setDistanceThreshold(distance_threshold);
+	seg.setMaxIterations(1000);
+	seg.setInputCloud(cloud);
+	seg.setIndices(boost::make_shared<vector<int>>(process_index));
+	seg.segment(*inliers, *coefficients);
+
+	lin_func.v[0] = coefficients->values[0];
+	lin_func.v[1] = coefficients->values[1];
+	lin_func.v[2] = coefficients->values[2];
+	lin_func.v[3] = coefficients->values[3];
+	lin_func.v[4] = coefficients->values[4];
+	lin_func.v[5] = coefficients->values[5];
+}
 
 void CloudTools::find_points_on_plane(
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud,

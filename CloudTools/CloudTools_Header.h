@@ -1,16 +1,3 @@
-//========================================================
-/**
-*  @file      CloudTools_Header.h
-*
-*  项目描述:	三类刹车片的表面缺陷以及基本几何尺寸的检测
-*  文件描述:	核心点云计算工具库头文件
-*  适用平台:	Windows10
-*  作    者:	LeiHui Li@  Wang_RiWei@
-*  项 目 组:	智能计算研发一组
-*  公    司:	天津微深联创科技有限公司
-*
-//========================================================
-*/
 #pragma once
 
 #include <direct.h>
@@ -24,7 +11,6 @@
 #include <list>
 #include <fstream>
 using namespace std;
-
 
 #include <Eigen/Dense> 
 
@@ -52,6 +38,5 @@ using namespace std;
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/segmentation/conditional_euclidean_clustering.h>
 using namespace pcl;
-
 
 //#include <pthread.h>
